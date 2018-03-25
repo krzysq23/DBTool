@@ -8,6 +8,11 @@ import pl.dbtool.models.DBParametr;
 
 public class DBServiceDao<T> {
 
+	public DBServiceDao(Class< T > tClass) {
+		super();
+		this.myClass = tClass;
+	}
+	
 	private Class< T > myClass;
 	
 	protected List<T> getAll(DBModel dbModel) throws InstantiationException, IllegalAccessException {

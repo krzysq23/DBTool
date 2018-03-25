@@ -15,13 +15,18 @@ import pl.dbtool.models.DBParametr;
 
 public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 
+	public DBService(Class< T > tClass) {
+		super(tClass);
+		this.myClass = tClass;
+	}
+
 	private Class< T > myClass;
 	
 	@Override
 	public List<T> getAll() {
 		
 		try {
-			DBModel dbModel = getDBModel(myClass);
+			DBModel dbModel = getDBModelByClass(myClass);
 			List<T> list = getAll(dbModel);
 			return list;
 		} catch (InstantiationException | IllegalAccessException e) {
@@ -34,7 +39,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 	public T getById(Object id) {
 		
 		try {
-			DBModel dbModel = getDBModel(myClass);
+			DBModel dbModel = getDBModelByClass(myClass);
 			dbModel.setColumnIDValue(id);
 			T element = getById(dbModel);
 			return element;
@@ -48,7 +53,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 	public List<T> getByParametr(DBParametr parametr) {
 		
 		try {
-			DBModel dbModel = getDBModel(myClass);
+			DBModel dbModel = getDBModelByClass(myClass);
 			List<T> list = getByParametr(dbModel, parametr);
 			return list;
 		} catch (InstantiationException | IllegalAccessException e) {
@@ -61,7 +66,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 	public List<T> getByParameters(List<DBParametr> parameters) {
 		
 		try {
-			DBModel dbModel = getDBModel(myClass);
+			DBModel dbModel = getDBModelByClass(myClass);
 			List<T> list = getByParameters(dbModel, parameters);
 			return list;
 		} catch (InstantiationException | IllegalAccessException e) {
@@ -73,24 +78,48 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 	@Override
 	public void save(T entity) {
 		
-		DBModel dbModel = getDBModel(entity);
+		DBModel dbModel = getDBModelByObject(entity);
 		save(dbModel);
 	}
 
 	@Override
 	public void update(T entity) {
 		
-		DBModel dbModel = getDBModel(entity);
+		DBModel dbModel = getDBModelByObject(entity);
 		update(dbModel);
 	}
 
 	@Override
 	public void remove(T entity) {
-		DBModel dbModel = getDBModel(myClass);
+		DBModel dbModel = getDBModelByObject(entity);
 		remove(dbModel);
 	}
 	
-	private DBModel getDBModel(Object object) {
+	private DBModel getDBModelByClass(Class< T > obj) {
+		DBModel dbModel = new DBModel();
+		
+		try {
+			
+			Annotation[] annotations = obj.getAnnotations();
+	
+			for(Annotation annotation : annotations){
+			    if(annotation instanceof Table){
+			    	Table myAnnotation = (Table) annotation;
+			        dbModel.setTable(myAnnotation.name());
+			    }
+			    if(annotation instanceof DBConnection){
+			    	DBConnection myAnnotation = (DBConnection) annotation;
+			        dbModel.setConnection(myAnnotation.connection());
+			    }
+			}
+
+		} catch (IllegalArgumentException | SecurityException  e) {
+			e.printStackTrace();
+		}
+		return dbModel;
+	}
+	
+	private DBModel getDBModelByObject(Object object) {
 		DBModel dbModel = new DBModel();
 		
 		try {
@@ -135,6 +164,5 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 		}
 		return dbModel;
 	}
-
 
 }

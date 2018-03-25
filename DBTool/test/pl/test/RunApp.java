@@ -5,7 +5,7 @@ import pl.models.Test;
 
 public class RunApp {
 
-	static DBService<Test> dao;
+	static DBService<Test> dao = new DBService<>(Test.class);
 	
 	public static void main(String[] args) {
 		Test test = new Test();
