@@ -1,15 +1,15 @@
 package pl.models;
 
-import pl.annotations.Column;
-import pl.annotations.ColumnId;
-import pl.annotations.DBConnection;
-import pl.annotations.Table;
+import pl.dbtool.annotations.Column;
+import pl.dbtool.annotations.ColumnId;
+import pl.dbtool.annotations.DBConnection;
+import pl.dbtool.annotations.Table;
 
 @DBConnection(connection = "oracle")
 @Table(name = "TableTest")
 public class Test {
 
-	@ColumnId
+	@ColumnId(name = "ID")
 	private int Id;
 	
 	@Column(name = "TITLE")

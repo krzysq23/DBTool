@@ -1,40 +1,42 @@
-package pl.test;
+package pl.dbtool.dataService;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
 import pl.dbtool.annotations.DBConnection;
 import pl.dbtool.annotations.Table;
-import pl.dbtool.dataService.DBService;
-import pl.dbtool.dataService.IDBService;
 import pl.models.DBModel;
-import pl.models.Test;
 
-public class RunApp {
+public class DBService implements IDBService{
 
-	public static IDBService bd = new DBService();
-	
-	public static void main(String[] args) {
-		Test test = new Test();
-		test.setId(1);
-		test.setTitle("tutul");
-		test.setName("nazwa");
-		// calssObj(test);
-		bd.getAll(test);
-		bd.getById(new Test(), 11);
+	@Override
+	public List<Object> getAll(Object object) {
+		
+		DBModel dbModel = getDBModel(object);
+		List<Object> list = new ArrayList<>();
+		
+		return list;
 	}
 
-	public static void calssObj(Object object) {
+	@Override
+	public List<Object> getById(Object object, Object id) {
+		System.out.println("po³¹czenie " + id);
+		return null;
+	}
 
+	private DBModel getDBModel(Object object) {
+		DBModel dbModel = new DBModel();
+		
 		try {
 			
 			Class<?> obj = object.getClass();
 	
-			DBModel dbModel = new DBModel();
 			Map<String, Object> fields = new HashMap<String, Object>();
 			
 			Annotation[] annotations = obj.getAnnotations();
@@ -79,7 +81,6 @@ public class RunApp {
 		} catch (IllegalArgumentException | SecurityException | IllegalAccessException  e) {
 			e.printStackTrace();
 		}
+		return dbModel;
 	}
-	
 }
-	

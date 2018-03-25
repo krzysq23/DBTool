@@ -1,4 +1,4 @@
-package pl.annotations;
+package pl.dbtool.annotations;
 
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -8,8 +8,8 @@ import java.lang.annotation.Target;
 
 @Retention(RUNTIME)
 @Target(TYPE)
-public @interface Table {
+public @interface DBConnection {
 
-	String name();
+	String connection() default "office";
 	
 }

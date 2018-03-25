@@ -6,6 +6,21 @@ public class DBModel {
 
 	private String connection;
 	private String table;
+	private String columnIDName;
+	private Object columnIDValue;
+	
+	public String getColumnIDName() {
+		return columnIDName;
+	}
+	public void setColumnIDName(String columnIDName) {
+		this.columnIDName = columnIDName;
+	}
+	public Object getColumnIDValue() {
+		return columnIDValue;
+	}
+	public void setColumnIDValue(Object columnIDValue) {
+		this.columnIDValue = columnIDValue;
+	}
 	private Map<String, Object> fields;
 	
 	public String getConnection() {
