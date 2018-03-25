@@ -1,4 +1,4 @@
-package pl.models;
+package pl.dbtool.models;
 
 import java.util.Map;
 

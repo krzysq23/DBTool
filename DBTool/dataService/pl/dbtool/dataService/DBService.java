@@ -2,7 +2,6 @@ package pl.dbtool.dataService;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,25 +10,85 @@ import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
 import pl.dbtool.annotations.DBConnection;
 import pl.dbtool.annotations.Table;
-import pl.models.DBModel;
+import pl.dbtool.models.DBModel;
+import pl.dbtool.models.DBParametr;
 
-public class DBService implements IDBService{
+public class DBService extends DBServiceDao implements IDBService{
 
 	@Override
 	public List<Object> getAll(Object object) {
 		
-		DBModel dbModel = getDBModel(object);
-		List<Object> list = new ArrayList<>();
-		
-		return list;
-	}
-
-	@Override
-	public List<Object> getById(Object object, Object id) {
-		System.out.println("po³¹czenie " + id);
+		try {
+			DBModel dbModel = getDBModel(object);
+			List<Object> list = getAll(object, dbModel);
+			return list;
+		} catch (InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
 		return null;
 	}
 
+	@Override
+	public Object getById(Object object, Object id) {
+		
+		try {
+			DBModel dbModel = getDBModel(object);
+			dbModel.setColumnIDValue(id);
+			Object element = getById(object, dbModel);
+			return element;
+		} catch (InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
+	public List<Object> getByParametr(Object object, DBParametr parametr) {
+		
+		try {
+			DBModel dbModel = getDBModel(object);
+			List<Object> list = getByParametr(object, dbModel, parametr);
+			return list;
+		} catch (InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
+	public List<Object> getByParameters(Object object, List<DBParametr> parameters) {
+		
+		try {
+			DBModel dbModel = getDBModel(object);
+			List<Object> list = getByParameters(object, dbModel, parameters);
+			return list;
+		} catch (InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
+	public void save(Object object) {
+		
+		DBModel dbModel = getDBModel(object);
+		save(dbModel);
+	}
+
+	@Override
+	public void update(Object object) {
+		
+		DBModel dbModel = getDBModel(object);
+		update(dbModel);
+	}
+	
+	@Override
+	public void remove(Object object) {
+		
+		DBModel dbModel = getDBModel(object);
+		remove(dbModel);
+	}
+	
 	private DBModel getDBModel(Object object) {
 		DBModel dbModel = new DBModel();
 		
@@ -55,10 +114,10 @@ public class DBService implements IDBService{
 			for (Field field : obj.getDeclaredFields()) {
 				if(field.isAnnotationPresent(ColumnId.class)) {
 					field.setAccessible(true);
-//					Object name = field.getName();
-//					Object type = field.getType();
+					ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
 					Object value = field.get(object);
-					fields.put("ID", value);
+					dbModel.setColumnIDName(columnId.name());
+					dbModel.setColumnIDValue(value);
 				}
 				if(field.isAnnotationPresent(Column.class)) {
 					field.setAccessible(true);
@@ -67,20 +126,13 @@ public class DBService implements IDBService{
 					fields.put(column.name(), value);
 				}
 			}
-			dbModel.setFields(fields);
-			System.out.println("po³¹czenie " + dbModel.getConnection());
-			System.out.println("tabela " + dbModel.getConnection());
 			
-			for(Map.Entry<String, Object> entry : dbModel.getFields().entrySet()) {
-			    String columnName = entry.getKey();
-			    Object value = entry.getValue();
-			    System.out.println("Kolumna " + columnName);
-			    System.out.println("Wartoœæ " + value);
-			}
+			dbModel.setFields(fields);
 				
 		} catch (IllegalArgumentException | SecurityException | IllegalAccessException  e) {
 			e.printStackTrace();
 		}
 		return dbModel;
 	}
+
 }
