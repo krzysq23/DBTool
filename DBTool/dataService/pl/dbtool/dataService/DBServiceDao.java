@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -37,10 +38,17 @@ public class DBServiceDao<T> {
 		return list;
 	}
 	
-	protected T getById(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+	protected T getById(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, SQLException {
 		System.out.println("getById");
 		Connection connection = getConnection(dbModel.getConnection());
-//		T object = createNewObject();
+		Statement statement = null;
+		List<T> list = new ArrayList<>();
+		String query = "SELECT * from " + dbModel.getTable() + " WHERE " + dbModel.getColumnIDName() + " = ? ";
+		statement = connection.createStatement();
+		ResultSet rs = statement.executeQuery(query);
+		while (rs.next()) {
+			list.add(createNewObject(rs));
+		}
 		return null;
 	}
 	
@@ -70,9 +78,16 @@ public class DBServiceDao<T> {
 		Connection connection = getConnection(dbModel.getConnection());
 	}
 	
-	protected void remove(DBModel dbModel) {
+	protected void remove(DBModel dbModel) throws SQLException {
 		System.out.println("remove");
 		Connection connection = getConnection(dbModel.getConnection());
+		String query = "DELETE FROM " + dbModel.getTable() + " WHERE " + dbModel.getColumnIDName() + " = ? ";
+		PreparedStatement preparedStatement = connection.prepareStatement(query);
+		preparedStatement.setInt(1, 1001);
+		preparedStatement.executeQuery();
+		connection.commit();
+		preparedStatement.close();
+		connection.close();
 	}
 	
 	private Connection getConnection(String connection) {

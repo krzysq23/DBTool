@@ -47,7 +47,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			T element = getById(dbModel);
 			return element;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
-				| IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+				| IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException | SQLException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -97,8 +97,13 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 
 	@Override
 	public void remove(T entity) {
-		DBModel dbModel = getDBModelByObject(entity);
-		remove(dbModel);
+		
+		try {
+			DBModel dbModel = getDBModelByObject(entity);
+			remove(dbModel);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private DBModel getDBModelByClass(Class< T > obj) {
