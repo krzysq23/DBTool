@@ -6,47 +6,53 @@ import java.util.List;
 import pl.dbtool.models.DBModel;
 import pl.dbtool.models.DBParametr;
 
-public class DBServiceDao {
+public class DBServiceDao<T> {
 
-	protected List<Object> getAll(Object object, DBModel dbModel) throws InstantiationException, IllegalAccessException {
+	private Class< T > myClass;
+	
+	protected List<T> getAll(DBModel dbModel) throws InstantiationException, IllegalAccessException {
 		System.out.println("getAll");
-		List<Object> list = new ArrayList<>();
-		Object element = object.getClass().newInstance();
-		list.add(element);
+		getConnection(dbModel.getConnection());
+		List<T> list = new ArrayList<>();
 		return list;
 	}
 	
-	protected Object getById(Object object, DBModel dbModel) throws InstantiationException, IllegalAccessException {
+	protected T getById(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		System.out.println("getById");
-		Object element = object.getClass().newInstance();
-		return element;
+		getConnection(dbModel.getConnection());
+		return null;
 	}
 	
-	protected List<Object> getByParametr(Object object, DBModel dbModel, DBParametr parametr) throws InstantiationException, IllegalAccessException {
+	protected List<T> getByParametr(DBModel dbModel, DBParametr parametr) throws InstantiationException, IllegalAccessException {
 		System.out.println("getByParametr");
-		List<Object> list = new ArrayList<>();
-		Object element = object.getClass().newInstance();
-		list.add(element);
+		getConnection(dbModel.getConnection());
+		List<T> list = new ArrayList<>();
 		return list;
 	}
 	
-	protected List<Object> getByParameters(Object object, DBModel dbModel, List<DBParametr> parameters) throws InstantiationException, IllegalAccessException {
+	protected List<T> getByParameters(DBModel dbModel, List<DBParametr> parameters) throws InstantiationException, IllegalAccessException {
 		System.out.println("getByParameters");
-		List<Object> list = new ArrayList<>();
-		Object element = object.getClass().newInstance();
-		list.add(element);
+		getConnection(dbModel.getConnection());
+		List<T> list = new ArrayList<>();
 		return list;
 	}
 
 	protected void save(DBModel dbModel) {
 		System.out.println("save");
+		getConnection(dbModel.getConnection());
 	}
 	
 	protected void update(DBModel dbModel) {
 		System.out.println("update");
+		getConnection(dbModel.getConnection());
 	}
 	
 	protected void remove(DBModel dbModel) {
 		System.out.println("remove");
+		getConnection(dbModel.getConnection());
+	}
+	
+	private void getConnection(String connection) {
+		
 	}
 }

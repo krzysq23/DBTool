@@ -13,14 +13,16 @@ import pl.dbtool.annotations.Table;
 import pl.dbtool.models.DBModel;
 import pl.dbtool.models.DBParametr;
 
-public class DBService extends DBServiceDao implements IDBService{
+public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 
+	private Class< T > myClass;
+	
 	@Override
-	public List<Object> getAll(Object object) {
+	public List<T> getAll() {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
-			List<Object> list = getAll(object, dbModel);
+			DBModel dbModel = getDBModel(myClass);
+			List<T> list = getAll(dbModel);
 			return list;
 		} catch (InstantiationException | IllegalAccessException e) {
 			e.printStackTrace();
@@ -29,25 +31,38 @@ public class DBService extends DBServiceDao implements IDBService{
 	}
 
 	@Override
-	public Object getById(Object object, Object id) {
+	public T getById(Object id) {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
+			DBModel dbModel = getDBModel(myClass);
 			dbModel.setColumnIDValue(id);
-			Object element = getById(object, dbModel);
+			T element = getById(dbModel);
 			return element;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	@Override
-	public List<Object> getByParametr(Object object, DBParametr parametr) {
+	public List<T> getByParametr(DBParametr parametr) {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
-			List<Object> list = getByParametr(object, dbModel, parametr);
+			DBModel dbModel = getDBModel(myClass);
+			List<T> list = getByParametr(dbModel, parametr);
+			return list;
+		} catch (InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	@Override
+	public List<T> getByParameters(List<DBParametr> parameters) {
+		
+		try {
+			DBModel dbModel = getDBModel(myClass);
+			List<T> list = getByParameters(dbModel, parameters);
 			return list;
 		} catch (InstantiationException | IllegalAccessException e) {
 			e.printStackTrace();
@@ -56,36 +71,22 @@ public class DBService extends DBServiceDao implements IDBService{
 	}
 
 	@Override
-	public List<Object> getByParameters(Object object, List<DBParametr> parameters) {
+	public void save(T entity) {
 		
-		try {
-			DBModel dbModel = getDBModel(object);
-			List<Object> list = getByParameters(object, dbModel, parameters);
-			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	@Override
-	public void save(Object object) {
-		
-		DBModel dbModel = getDBModel(object);
+		DBModel dbModel = getDBModel(entity);
 		save(dbModel);
 	}
 
 	@Override
-	public void update(Object object) {
+	public void update(T entity) {
 		
-		DBModel dbModel = getDBModel(object);
+		DBModel dbModel = getDBModel(entity);
 		update(dbModel);
 	}
-	
+
 	@Override
-	public void remove(Object object) {
-		
-		DBModel dbModel = getDBModel(object);
+	public void remove(T entity) {
+		DBModel dbModel = getDBModel(myClass);
 		remove(dbModel);
 	}
 	
@@ -134,5 +135,6 @@ public class DBService extends DBServiceDao implements IDBService{
 		}
 		return dbModel;
 	}
+
 
 }
