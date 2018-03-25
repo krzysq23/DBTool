@@ -2,6 +2,8 @@ package pl.dbtool.dataService;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +31,8 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			DBModel dbModel = getDBModelByClass(myClass);
 			List<T> list = getAll(dbModel);
 			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | SQLException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -43,7 +46,8 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			dbModel.setColumnIDValue(id);
 			T element = getById(dbModel);
 			return element;
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -56,7 +60,8 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			DBModel dbModel = getDBModelByClass(myClass);
 			List<T> list = getByParametr(dbModel, parametr);
 			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -69,7 +74,8 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			DBModel dbModel = getDBModelByClass(myClass);
 			List<T> list = getByParameters(dbModel, parameters);
 			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		return null;
