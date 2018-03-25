@@ -1,23 +1,33 @@
 package pl.test;
 
+import java.util.List;
+
 import pl.dbtool.dataService.DBService;
-import pl.dbtool.dataService.IDBService;
 import pl.models.Test;
 
 public class RunApp {
 
-	public static IDBService dbService = new DBService();
+	static DBService<Test> dao = new DBService<>(Test.class);
 	
 	public static void main(String[] args) {
 		Test test = new Test();
 		test.setId(1);
 		test.setTitle("tutul");
 		test.setName("nazwa");
-		dbService.getAll(test);
-		dbService.getById(new Test(), 11);
-		dbService.save(test);
-		dbService.update(test);
-		dbService.remove(test);
+		dao.save(test);
+		dao.update(test);
+		dao.remove(test);
+		
+		Test item = dao.getById(1);
+		System.out.println("getId " + item.getId());
+		System.out.println("getName " + item.getName());
+		System.out.println("getTitle " + item.getTitle());
+		
+		List<Test> list = dao.getAll();
+		for (Test xxx : list) {
+			System.out.println("xxx name " + xxx.getName());
+			System.out.println("xxx title " + xxx.getTitle());
+		}
 	}
 	
 }

@@ -2,6 +2,8 @@ package pl.dbtool.dataService;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,83 +15,122 @@ import pl.dbtool.annotations.Table;
 import pl.dbtool.models.DBModel;
 import pl.dbtool.models.DBParametr;
 
-public class DBService extends DBServiceDao implements IDBService{
+public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 
+	public DBService(Class< T > tClass) {
+		super(tClass);
+		this.myClass = tClass;
+	}
+
+	private Class< T > myClass;
+	
 	@Override
-	public List<Object> getAll(Object object) {
+	public List<T> getAll() {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
-			List<Object> list = getAll(object, dbModel);
+			DBModel dbModel = getDBModelByClass(myClass);
+			List<T> list = getAll(dbModel);
 			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | SQLException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	@Override
-	public Object getById(Object object, Object id) {
+	public T getById(Object id) {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
+			DBModel dbModel = getDBModelByClass(myClass);
 			dbModel.setColumnIDValue(id);
-			Object element = getById(object, dbModel);
+			T element = getById(dbModel);
 			return element;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException | SQLException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	@Override
-	public List<Object> getByParametr(Object object, DBParametr parametr) {
+	public List<T> getByParametr(DBParametr parametr) {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
-			List<Object> list = getByParametr(object, dbModel, parametr);
+			DBModel dbModel = getDBModelByClass(myClass);
+			List<T> list = getByParametr(dbModel, parametr);
 			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
-
+	
 	@Override
-	public List<Object> getByParameters(Object object, List<DBParametr> parameters) {
+	public List<T> getByParameters(List<DBParametr> parameters) {
 		
 		try {
-			DBModel dbModel = getDBModel(object);
-			List<Object> list = getByParameters(object, dbModel, parameters);
+			DBModel dbModel = getDBModelByClass(myClass);
+			List<T> list = getByParameters(dbModel, parameters);
 			return list;
-		} catch (InstantiationException | IllegalAccessException e) {
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	@Override
-	public void save(Object object) {
+	public void save(T entity) {
 		
-		DBModel dbModel = getDBModel(object);
+		DBModel dbModel = getDBModelByObject(entity);
 		save(dbModel);
 	}
 
 	@Override
-	public void update(Object object) {
+	public void update(T entity) {
 		
-		DBModel dbModel = getDBModel(object);
+		DBModel dbModel = getDBModelByObject(entity);
 		update(dbModel);
 	}
-	
+
 	@Override
-	public void remove(Object object) {
+	public void remove(T entity) {
 		
-		DBModel dbModel = getDBModel(object);
-		remove(dbModel);
+		try {
+			DBModel dbModel = getDBModelByObject(entity);
+			remove(dbModel);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
-	private DBModel getDBModel(Object object) {
+	private DBModel getDBModelByClass(Class< T > obj) {
+		DBModel dbModel = new DBModel();
+		
+		try {
+			
+			Annotation[] annotations = obj.getAnnotations();
+	
+			for(Annotation annotation : annotations){
+			    if(annotation instanceof Table){
+			    	Table myAnnotation = (Table) annotation;
+			        dbModel.setTable(myAnnotation.name());
+			    }
+			    if(annotation instanceof DBConnection){
+			    	DBConnection myAnnotation = (DBConnection) annotation;
+			        dbModel.setConnection(myAnnotation.connection());
+			    }
+			}
+
+		} catch (IllegalArgumentException | SecurityException  e) {
+			e.printStackTrace();
+		}
+		return dbModel;
+	}
+	
+	private DBModel getDBModelByObject(Object object) {
 		DBModel dbModel = new DBModel();
 		
 		try {
