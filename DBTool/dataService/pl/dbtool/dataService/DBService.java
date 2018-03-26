@@ -61,7 +61,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			List<T> list = getByParametr(dbModel, parametr);
 			return list;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
-				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | SQLException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -75,7 +75,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 			List<T> list = getByParameters(dbModel, parameters);
 			return list;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException 
-				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
+				| NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | SQLException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -84,15 +84,23 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 	@Override
 	public void save(T entity) {
 		
-		DBModel dbModel = getDBModelByObject(entity);
-		save(dbModel);
+		try {
+			DBModel dbModel = getDBModelByObject(entity);
+			save(dbModel);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public void update(T entity) {
-		
-		DBModel dbModel = getDBModelByObject(entity);
-		update(dbModel);
+
+		try {
+			DBModel dbModel = getDBModelByObject(entity);
+			update(dbModel);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -157,6 +165,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 					field.setAccessible(true);
 					ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
 					Object value = field.get(object);
+					dbModel.setAutoIncrement(columnId.seq());
 					dbModel.setColumnIDName(columnId.name());
 					dbModel.setColumnIDValue(value);
 				}

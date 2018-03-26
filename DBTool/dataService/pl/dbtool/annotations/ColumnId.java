@@ -10,5 +10,10 @@ import java.lang.annotation.Target;
 @Target(FIELD)
 public @interface ColumnId {
 
+	public enum AutoIncrement {
+	   TRUE, FALSE
+	}
+	
+	AutoIncrement seq() default AutoIncrement.TRUE;
 	String name();
 }

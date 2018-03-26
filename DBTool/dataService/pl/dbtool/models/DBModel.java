@@ -2,12 +2,16 @@ package pl.dbtool.models;
 
 import java.util.Map;
 
+import pl.dbtool.annotations.ColumnId.AutoIncrement;
+
 public class DBModel {
 
 	private String connection;
 	private String table;
+	private AutoIncrement autoIncrement;
 	private String columnIDName;
 	private Object columnIDValue;
+	private Map<String, Object> fields;
 	
 	public String getColumnIDName() {
 		return columnIDName;
@@ -21,7 +25,6 @@ public class DBModel {
 	public void setColumnIDValue(Object columnIDValue) {
 		this.columnIDValue = columnIDValue;
 	}
-	private Map<String, Object> fields;
 	
 	public String getConnection() {
 		return connection;
@@ -40,5 +43,14 @@ public class DBModel {
 	}
 	public void setFields(Map<String, Object> fields) {
 		this.fields = fields;
+	}
+	public AutoIncrement isAutoIncrement() {
+		return autoIncrement;
+	}
+	public void setAutoIncrement(AutoIncrement autoIncrement) {
+		this.autoIncrement = autoIncrement;
+	}
+	public AutoIncrement getAutoIncrement() {
+		return autoIncrement;
 	}
 }

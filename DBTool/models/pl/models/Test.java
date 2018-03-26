@@ -2,6 +2,7 @@ package pl.models;
 
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
+import pl.dbtool.annotations.ColumnId.AutoIncrement;
 import pl.dbtool.annotations.DBConnection;
 import pl.dbtool.annotations.Table;
 
@@ -9,7 +10,7 @@ import pl.dbtool.annotations.Table;
 @Table(name = "TableTest")
 public class Test {
 
-	@ColumnId(name = "ID")
+	@ColumnId(seq = AutoIncrement.TRUE, name = "ID")
 	private int Id;
 	
 	@Column(name = "TITLE")
