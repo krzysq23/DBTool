@@ -1,5 +1,6 @@
 package pl.dbtool.models;
 
+import java.util.List;
 import java.util.Map;
 
 import pl.dbtool.annotations.ColumnId.AutoIncrement;
@@ -12,6 +13,7 @@ public class DBModel {
 	private String columnIDName;
 	private Object columnIDValue;
 	private Map<String, Object> fields;
+	private List<DBJoinTable> joinTables;
 	
 	public String getColumnIDName() {
 		return columnIDName;
@@ -52,5 +54,11 @@ public class DBModel {
 	}
 	public AutoIncrement getAutoIncrement() {
 		return autoIncrement;
+	}
+	public List<DBJoinTable> getJoinTables() {
+		return joinTables;
+	}
+	public void setJoinTables(List<DBJoinTable> joinTables) {
+		this.joinTables = joinTables;
 	}
 }

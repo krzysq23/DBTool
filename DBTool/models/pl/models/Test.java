@@ -1,9 +1,16 @@
 package pl.models;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
 import pl.dbtool.annotations.ColumnId.AutoIncrement;
+import pl.dbtool.annotations.ManyToMany.FetchType;
 import pl.dbtool.annotations.DBConnection;
+import pl.dbtool.annotations.JoinTable;
+import pl.dbtool.annotations.ManyToMany;
+import pl.dbtool.annotations.ManyToOne;
 import pl.dbtool.annotations.Table;
 
 @DBConnection(connection = "oracle")
@@ -19,6 +26,14 @@ public class Test {
 	@Column(name = "NAME")
 	private String name;
 
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(tableName = "TEST_INFO", joinColumnsName = "ID", referencedColumnName = "TEST_ID")
+	private Set<TestInfo> testInfo = new HashSet<TestInfo>();
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinTable(tableName = "TEST_INFO", joinColumnsName = "ID", referencedColumnName = "TEST_ID")
+	private TestInfo testInfoObj ;
+	
 	public int getId() {
 		return Id;
 	}
@@ -42,4 +57,21 @@ public class Test {
 	public void setName(String name) {
 		this.name = name;
 	}
+
+	public Set<TestInfo> getTestInfo() {
+		return testInfo;
+	}
+
+	public void setTestInfo(Set<TestInfo> testInfo) {
+		this.testInfo = testInfo;
+	}
+
+	public TestInfo getTestInfoObj() {
+		return testInfoObj;
+	}
+
+	public void setTestInfoObj(TestInfo testInfoObj) {
+		this.testInfoObj = testInfoObj;
+	}
+	
 }

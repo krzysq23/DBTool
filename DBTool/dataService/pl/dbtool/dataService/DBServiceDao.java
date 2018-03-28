@@ -11,14 +11,18 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
 import pl.dbtool.annotations.ColumnId.AutoIncrement;
+import pl.dbtool.models.DBJoinTable;
+import pl.dbtool.models.DBJoinTable.Relationship;
+import pl.dbtool.models.DBJoinedColumn;
 import pl.dbtool.models.DBModel;
 import pl.dbtool.models.DBParametr;
 
@@ -31,67 +35,163 @@ public class DBServiceDao<T> {
 	
 	private Class< T > myClass;
 	
-	protected List<T> getAll(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException, SQLException {
+	protected List<T> getAll(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException, SQLException, NoSuchFieldException {
 
 		Connection connection = getConnection(dbModel.getConnection());
-		Statement statement = null;
-		List<T> list = new ArrayList<>();
-		String query = "SELECT * from " + dbModel.getTable();
-		statement = connection.createStatement();
-		ResultSet rs = statement.executeQuery(query);
-		while (rs.next()) {
-			list.add(createNewObject(rs));
+		boolean isJoined = false;
+		getJoinedObjectList(dbModel, connection);
+		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
+			isJoined = true;
 		}
+		String query = "SELECT * FROM " + dbModel.getTable();
+		Statement statement = connection.createStatement();
+		ResultSet rs = statement.executeQuery(query);
+		List<T> list = new ArrayList<>();
+		while (rs.next()) {
+			T element = createNewObject(rs);
+			if(isJoined) {
+				for (DBJoinTable joinTab : dbModel.getJoinTables()) {
+					Field fieldJoinedColumn = element.getClass().getDeclaredField(joinTab.getJoinColumnsFieldName());
+					Field fieldJoinedList = element.getClass().getDeclaredField(joinTab.getFieldName());
+					fieldJoinedColumn.setAccessible(true);
+					fieldJoinedList.setAccessible(true);
+					Object value = fieldJoinedColumn.get(element);
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToMany) && joinTab.getFieldsList() != null) {
+						fieldJoinedList.set(element, joinTab.getFieldsList().get(value));
+					}
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToOne) && joinTab.getField() != null) {
+						fieldJoinedList.set(element, joinTab.getField().get(value));
+					}
+				}
+			}
+			list.add(element);
+		}
+		connection.close();
 		return list;
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected T getById(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, SQLException {
+	protected T getById(DBModel dbModel) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, SQLException, NoSuchFieldException {
 
 		Connection connection = getConnection(dbModel.getConnection());
-		Statement statement = null;
+		boolean isJoined = false;
+		getJoinedObjectList(dbModel, connection);
+		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
+			isJoined = true;
+		}
 		Object element = new Object();
 		String query = "SELECT * from " + dbModel.getTable() + " WHERE " + dbModel.getColumnIDName() + " = ? ";
-		statement = connection.createStatement();
-		ResultSet rs = statement.executeQuery(query);
+		PreparedStatement preparedStatement = connection.prepareStatement(query);
+		setPreparedStatement(1, preparedStatement, dbModel.getColumnIDValue());
+		ResultSet rs = preparedStatement.executeQuery();
 		while (rs.next()) {
 			element = createNewObject(rs);
+			if(isJoined) {
+				for (DBJoinTable joinTab : dbModel.getJoinTables()) {
+					Field fieldJoinedColumn = element.getClass().getDeclaredField(joinTab.getJoinColumnsFieldName());
+					Field fieldJoinedList = element.getClass().getDeclaredField(joinTab.getFieldName());
+					fieldJoinedColumn.setAccessible(true);
+					fieldJoinedList.setAccessible(true);
+					Object value = fieldJoinedColumn.get(element);
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToMany) && joinTab.getFieldsList() != null) {
+						fieldJoinedList.set(element, joinTab.getFieldsList().get(value));
+					}
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToOne) && joinTab.getField() != null) {
+						fieldJoinedList.set(element, joinTab.getField().get(value));
+					}
+				}
+			}
 		}
+		preparedStatement.close();
+		connection.close();
 		return (T) element;
 	}
 	
-	protected List<T> getByParametr(DBModel dbModel, DBParametr parametr) throws InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException, SQLException {
+	protected List<T> getByParametr(DBModel dbModel, DBParametr parametr) throws InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException, SQLException, NoSuchFieldException {
 
 		Connection connection = getConnection(dbModel.getConnection());
+		boolean isJoined = false;
+		getJoinedObjectList(dbModel, connection);
+		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
+			isJoined = true;
+		}
 		List<T> list = new ArrayList<>();
-		String query = "SELECT * from " + dbModel.getTable() + " WHERE ";
+		String query = "SELECT * from " + dbModel.getTable() + " WHERE " + parametr.getFieldName() + " " + parametr.getOperator() + " ?";
 		PreparedStatement preparedStatement = connection.prepareStatement(query);
-		preparedStatement.setInt(1, 1001);
+		setPreparedStatement(1, preparedStatement, parametr.getValue());
 		ResultSet rs = preparedStatement.executeQuery();
 		while (rs.next()) {
-			list.add(createNewObject(rs));
+			T element = createNewObject(rs);
+			if(isJoined) {
+				for (DBJoinTable joinTab : dbModel.getJoinTables()) {
+					Field fieldJoinedColumn = element.getClass().getDeclaredField(joinTab.getJoinColumnsFieldName());
+					Field fieldJoinedList = element.getClass().getDeclaredField(joinTab.getFieldName());
+					fieldJoinedColumn.setAccessible(true);
+					fieldJoinedList.setAccessible(true);
+					Object value = fieldJoinedColumn.get(element);
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToMany) && joinTab.getFieldsList() != null) {
+						fieldJoinedList.set(element, joinTab.getFieldsList().get(value));
+					}
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToOne) && joinTab.getField() != null) {
+						fieldJoinedList.set(element, joinTab.getField().get(value));
+					}
+				}
+			}
+			list.add(element);
 		}
 		preparedStatement.close();
 		connection.close();
 		return list;
 	}
 	
-	protected List<T> getByParameters(DBModel dbModel, List<DBParametr> parameters) throws InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException, SQLException {
+	protected List<T> getByParameters(DBModel dbModel, List<DBParametr> parameters, String conjunction) throws InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException, SQLException, NoSuchFieldException {
 
 		Connection connection = getConnection(dbModel.getConnection());
+		boolean isJoined = false;
+		getJoinedObjectList(dbModel, connection);
+		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
+			isJoined = true;
+		}
 		List<T> list = new ArrayList<>();
 		String query = "SELECT * from " + dbModel.getTable() + " WHERE ";
+		int i = 0;
+		for(DBParametr param : parameters) {
+			if(i == 0) {
+				query += param.getFieldName() + " " + param.getOperator() + " ?";
+			} else {
+				query += conjunction + param.getFieldName() + " " + param.getOperator() + " ?";
+			}
+			i++;
+		}
 		PreparedStatement preparedStatement = connection.prepareStatement(query);
-		preparedStatement.setInt(1, 1001);
+		i = 1;
+		for(DBParametr param : parameters) {
+			setPreparedStatement(i, preparedStatement, param.getValue());
+			i++;
+		}
 		ResultSet rs = preparedStatement.executeQuery();
 		while (rs.next()) {
-			list.add(createNewObject(rs));
+			T element = createNewObject(rs);
+			if(isJoined) {
+				for (DBJoinTable joinTab : dbModel.getJoinTables()) {
+					Field fieldJoinedColumn = element.getClass().getDeclaredField(joinTab.getJoinColumnsFieldName());
+					Field fieldJoinedList = element.getClass().getDeclaredField(joinTab.getFieldName());
+					fieldJoinedColumn.setAccessible(true);
+					fieldJoinedList.setAccessible(true);
+					Object value = fieldJoinedColumn.get(element);
+					if(value != null && joinTab.getRelationship().equals(Relationship.ManyToMany)) {
+						fieldJoinedList.set(element, joinTab.getFieldsList().get(value));
+					}
+				}
+			}
+			list.add(element);
 		}
 		preparedStatement.close();
 		connection.close();
 		return list;
 	}
 
+	@SuppressWarnings("unused")
 	protected void save(DBModel dbModel) throws SQLException {
 
 		Connection connection = getConnection(dbModel.getConnection());
@@ -113,20 +213,22 @@ public class DBServiceDao<T> {
 			query += "?, ";
 		}
 		i = 0;
-		for (Iterator<Entry<String, Object>> iterator = dbModel.getFields().entrySet().iterator(); iterator.hasNext();) {
+		for (Map.Entry<String, Object> entry : dbModel.getFields().entrySet()) {
 			if(i++ == dbModel.getFields().size() - 1) {
-				query += " ? )";
+				query += "? )";
 			} else {
 				query += "?, ";
 			}
 		}
 		PreparedStatement preparedStatement = connection.prepareStatement(query);
-		i = 0;
+		i = 1;
 		if(dbModel.getAutoIncrement().equals(AutoIncrement.FALSE)) {
 			setPreparedStatement(i, preparedStatement, dbModel.getColumnIDValue());
+			i++;
 		}
 		for (Map.Entry<String, Object> entry : dbModel.getFields().entrySet()) {
 			setPreparedStatement(i, preparedStatement, entry.getValue());
+			i++;
 		}
 		preparedStatement.executeQuery();
 		connection.commit();
@@ -148,9 +250,10 @@ public class DBServiceDao<T> {
 		}
 		query += "WHERE " + dbModel.getColumnIDName() + " = ?";
 		PreparedStatement preparedStatement = connection.prepareStatement(query);
-		i = 0;
+		i = 1;
 		for (Map.Entry<String, Object> entry : dbModel.getFields().entrySet()) {
 			setPreparedStatement(i, preparedStatement, entry.getValue());
+			i++;
 		}
 		setPreparedStatement(i, preparedStatement, dbModel.getColumnIDValue());
 		preparedStatement.executeQuery();
@@ -164,12 +267,7 @@ public class DBServiceDao<T> {
 		Connection connection = getConnection(dbModel.getConnection());
 		String query = "DELETE FROM " + dbModel.getTable() + " WHERE " + dbModel.getColumnIDName() + " = ? ";
 		PreparedStatement preparedStatement = connection.prepareStatement(query);
-		if (dbModel.getColumnIDValue() instanceof Integer) {
-			preparedStatement.setInt(1, (int) dbModel.getColumnIDValue());
-		} 
-		else if (dbModel.getColumnIDValue() instanceof String) {
-			preparedStatement.setString(1, (String) dbModel.getColumnIDValue());
-		}
+		setPreparedStatement(1, preparedStatement, dbModel.getColumnIDValue());
 		preparedStatement.executeQuery();
 		connection.commit();
 		preparedStatement.close();
@@ -177,7 +275,8 @@ public class DBServiceDao<T> {
 	}
 	
 	private Connection getConnection(String connection) {
-		return null;
+		Connection myConnection = null;
+	    return myConnection;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -200,25 +299,51 @@ public class DBServiceDao<T> {
 		return (T) object;
 	}
 	
+	private DBJoinedColumn createNewJoinedObject(ResultSet rs, Class<?> clazz, String columnName) throws ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, SQLException {
+		Constructor<?> ctor = clazz.getConstructor();
+		Object object = ctor.newInstance();
+		DBJoinedColumn element = new DBJoinedColumn();
+		for (Field field : object.getClass().getDeclaredFields()) {
+			field.setAccessible(true);
+			if(field.isAnnotationPresent(ColumnId.class)) {
+				field.setAccessible(true);
+				ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
+				Object value = getValueFromResultSet(rs, field, columnId.name());
+				if(columnId.name().equals(columnName)) element.setJoinedColumnValue(value);
+				field.set(object, value);
+			}
+			if(field.isAnnotationPresent(Column.class)) {
+				Column column = (Column) field.getDeclaredAnnotation(Column.class);
+				Object value = getValueFromResultSet(rs, field, column.name());
+				if(column.name().equals(columnName)) element.setJoinedColumnValue(value);
+				field.set(object, value);
+			}
+		}
+		element.setElement(object);
+		return element ;
+	}
+	
 	private Object getValueFromResultSet(ResultSet rs, Field field, String columnName) throws SQLException {
 		
-		if (field.getType() == Integer.class) {
+		if (field.getType().equals(Integer.TYPE)) {
 			return  rs.getInt(columnName);
-	    } else if(field.getType() == String.class) {
+	    } else if (field.getType().equals(Integer.class)) {
+			return  rs.getInt(columnName);
+	    } else if(field.getType().equals(String.class)) {
 	    	return rs.getString(columnName);
-	    } else if(field.getType() == Float.class) {
+	    } else if(field.getType().equals(Float.TYPE)) {
 	    	return rs.getFloat(columnName);
-	    } else if(field.getType() == Boolean.class) {
+	    } else if(field.getType().equals(Boolean.TYPE)) {
 	    	return rs.getBoolean(columnName);
-	    } else if(field.getType() == Date.class) {
+	    } else if(field.getType().equals(Date.class)) {
 	    	return rs.getDate(columnName);
-	    } else if(field.getType() == Blob.class) {
+	    } else if(field.getType().equals(Blob.class)) {
 	    	return rs.getBlob(columnName);
-	    } else if(field.getType() == Long.class) {
+	    } else if(field.getType().equals(Long.TYPE)) {
 	    	return rs.getLong(columnName);
-	    } else if(field.getType() == Double.class) {
+	    } else if(field.getType().equals(Double.TYPE)) {
 	    	return rs.getDouble(columnName);
-	    } else if(field.getType() == Byte.class) {
+	    } else if(field.getType().equals(Byte.TYPE)) {
 	    	return rs.getBytes(columnName);
 	    } else {
 	    	return null;
@@ -228,23 +353,68 @@ public class DBServiceDao<T> {
 	private void setPreparedStatement(int i, PreparedStatement preparedStatement, Object value) throws SQLException {
 		
 		if (value instanceof Integer) {
-			preparedStatement.setInt(i++, (int) value);
+			preparedStatement.setInt(i, (int) value);
 	    } else if(value instanceof String) {
-	    	preparedStatement.setString(i++, (String) value);
+	    	preparedStatement.setString(i, (String) value);
 	    } else if(value instanceof Float) {
-			preparedStatement.setFloat(i++, (float) value);
+			preparedStatement.setFloat(i, (float) value);
 	    } else if(value instanceof Boolean) {
-			preparedStatement.setBoolean(i++, (boolean) value);
+			preparedStatement.setBoolean(i, (boolean) value);
 	    } else if(value instanceof Date) {
-			preparedStatement.setDate(i++, (Date) value);
+			preparedStatement.setDate(i, (Date) value);
 	    } else if(value instanceof Blob) {
-			preparedStatement.setBlob(i++, (Blob) value);
+			preparedStatement.setBlob(i, (Blob) value);
 	    } else if(value instanceof Long) {
-			preparedStatement.setLong(i++, (long) value);
+			preparedStatement.setLong(i, (long) value);
 	    } else if(value instanceof Double) {
-			preparedStatement.setDouble(i++, (double) value);
+			preparedStatement.setDouble(i, (double) value);
 	    } else if(value instanceof Byte) {
-			preparedStatement.setByte(i++, (byte) value);
+			preparedStatement.setByte(i, (byte) value);
 	    }
+	}
+	
+	private void getJoinedObjectList(DBModel dbModel, Connection connection) throws SQLException, ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		
+		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
+			for (DBJoinTable record : dbModel.getJoinTables()) {
+				if(record.getRelationship().equals(Relationship.ManyToMany))
+				{
+					Map<Object, Set<Object>> listElement = new HashMap<Object, Set<Object>>();
+					Class<?> clazz = record.getClassName();
+					String queryJoin = "SELECT " + record.getTableName() + ".* FROM " + dbModel.getTable() + " JOIN "
+							+  record.getTableName() + " ON " + record.getTableName() + "." + record.getReferencedColumnName() 
+									+ " = " + dbModel.getTable() + "." + record.getJoinColumnsName();
+					Statement statementJoin = connection.createStatement();
+					ResultSet rsJoin = statementJoin.executeQuery(queryJoin);
+					while (rsJoin.next()) {
+						DBJoinedColumn element = createNewJoinedObject(rsJoin, clazz, record.getReferencedColumnName());
+						if (!listElement.containsKey(element.getJoinedColumnValue())) {
+							Set<Object> newList = new HashSet<Object>();
+							newList.add(element.getElement());
+							listElement.put(element.getJoinedColumnValue(), newList);
+						} else {
+							Set<Object> oldList = listElement.get(element.getJoinedColumnValue());
+							oldList.add(element.getElement());
+						}
+					}
+					record.setFieldsList(listElement);
+				}
+				if(record.getRelationship().equals(Relationship.ManyToOne))
+				{
+					Map<Object, Object> listElement = new HashMap<Object, Object>();
+					Class<?> clazz = record.getClassName();
+					String queryJoin = "SELECT " + record.getTableName() + ".* FROM " + dbModel.getTable() + " JOIN "
+							+  record.getTableName() + " ON " + record.getTableName() + "." + record.getReferencedColumnName() 
+									+ " = " + dbModel.getTable() + "." + record.getJoinColumnsName();
+					Statement statementJoin = connection.createStatement();
+					ResultSet rsJoin = statementJoin.executeQuery(queryJoin);
+					while (rsJoin.next()) {
+						DBJoinedColumn element = createNewJoinedObject(rsJoin, clazz, record.getReferencedColumnName());
+						listElement.put(element.getJoinedColumnValue(), element.getElement());
+					}
+					record.setField(listElement);
+				}
+			}
+		}
 	}
 }
