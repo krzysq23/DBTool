@@ -6,13 +6,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import pl.dbtool.annotations.ManyToMany.CascadeType;
-import pl.dbtool.annotations.ManyToMany.FetchType;
 
 @Retention(RUNTIME)
 @Target(FIELD)
-public @interface ManyToOne {
+public @interface SequenceGenerator {
 
-	FetchType fetch() default FetchType.LAZY;
-	CascadeType cascade() default CascadeType.ALL;
+	String sequenceName();
 }

@@ -10,13 +10,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
 import pl.dbtool.annotations.DBConnection;
 import pl.dbtool.annotations.JoinTable;
 import pl.dbtool.annotations.ManyToMany;
+import pl.dbtool.annotations.ManyToOne;
 import pl.dbtool.annotations.Table;
+import pl.dbtool.annotations.ManyToMany.CascadeType;
 import pl.dbtool.models.DBJoinTable;
 import pl.dbtool.models.DBJoinTable.Relationship;
 import pl.dbtool.models.DBModel;
@@ -100,7 +103,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 		try {
 			DBModel dbModel = getDBModelByObject(entity);
 			save(dbModel);
-		} catch (SQLException e) {
+		} catch (SQLException | ClassNotFoundException | IllegalArgumentException | IllegalAccessException e) {
 			e.printStackTrace();
 		}
 	}
@@ -157,7 +160,6 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 				Object value = field.get(object);
 				if(field.isAnnotationPresent(ColumnId.class)) {
 					ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
-					dbModel.setAutoIncrement(columnId.seq());
 					dbModel.setColumnIDName(columnId.name());
 					dbModel.setColumnIDValue(value);
 					fieldNames.put(columnId.name(), field.getName());
@@ -179,13 +181,22 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 					table.setReferencedColumnName(joinTable.referencedColumnName());
 					table.setJoinColumnsFieldName(fieldNames.get(joinTable.joinColumnsName()));
 					if(field.isAnnotationPresent(ManyToMany.class)) {
+						ManyToMany manyToMany = (ManyToMany) field.getDeclaredAnnotation(ManyToMany.class);
 				        ParameterizedType stringListType = (ParameterizedType) field.getGenericType();
-				        Class<?> stringListClass = (Class<?>) stringListType.getActualTypeArguments()[0];
+				        Class<?> className = (Class<?>) stringListType.getActualTypeArguments()[0];
+				        DBConnection connection = (DBConnection) className.getAnnotation(DBConnection.class);
 						table.setRelationship(Relationship.ManyToMany);
-						table.setClassName(stringListClass);
+						table.setFetchType(manyToMany.fetch());
+						table.setClassName(className);
+						table.setConnection(connection.connection());
 					} else {
+						ManyToOne manyToOne = (ManyToOne) field.getDeclaredAnnotation(ManyToOne.class);
+						Class<?> className = field.getType();
+						DBConnection connection = (DBConnection) className.getAnnotation(DBConnection.class);
 						table.setRelationship(Relationship.ManyToOne);
-						table.setClassName(field.getType());
+						table.setFetchType(manyToOne.fetch());
+						table.setClassName(className);
+						table.setConnection(connection.connection());
 					}
 					joinTables.add(table);
 				}
@@ -199,6 +210,7 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 		return dbModel;
 	}
 	
+	@SuppressWarnings("unchecked")
 	private DBModel getDBModelByObject(Object object) {
 		DBModel dbModel = new DBModel();
 		
@@ -228,18 +240,20 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 				Object value = field.get(object);
 				if(field.isAnnotationPresent(ColumnId.class)) {
 					ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
-					dbModel.setAutoIncrement(columnId.seq());
 					dbModel.setColumnIDName(columnId.name());
 					dbModel.setColumnIDValue(value);
 					fieldNames.put(columnId.name(), field.getName());
 				}
 				if(field.isAnnotationPresent(Column.class)) {
 					Column column = (Column) field.getDeclaredAnnotation(Column.class);
-					fields.put(column.name(), value);
+					if(value != null) {
+						fields.put(column.name(), value);
+					}
 					fieldNames.put(column.name(), field.getName());
 				}
 			}
 			for (Field field : obj.getDeclaredFields()) {
+				field.setAccessible(true);
 				if(field.isAnnotationPresent(JoinTable.class)) {
 					JoinTable joinTable = (JoinTable) field.getDeclaredAnnotation(JoinTable.class);
 					DBJoinTable table = new DBJoinTable();
@@ -249,13 +263,30 @@ public class DBService<T> extends DBServiceDao<T> implements IDBService<T>{
 					table.setReferencedColumnName(joinTable.referencedColumnName());
 					table.setJoinColumnsFieldName(fieldNames.get(joinTable.joinColumnsName()));
 					if(field.isAnnotationPresent(ManyToMany.class)) {
+						ManyToMany manyToMany = (ManyToMany) field.getDeclaredAnnotation(ManyToMany.class);
+						Set<Object> value = (Set<Object>) field.get(object);
 				        ParameterizedType stringListType = (ParameterizedType) field.getGenericType();
-				        Class<?> stringListClass = (Class<?>) stringListType.getActualTypeArguments()[0];
+				        Class<?> className = (Class<?>) stringListType.getActualTypeArguments()[0];
+				        DBConnection connection = (DBConnection) className.getAnnotation(DBConnection.class);
 						table.setRelationship(Relationship.ManyToMany);
-						table.setClassName(stringListClass);
+						table.setFetchType(manyToMany.fetch());
+						table.setClassName(className);
+						table.setConnection(connection.connection());
+						if(value != null && manyToMany.cascade().equals(CascadeType.ALL)) {
+							table.setObjectList(value);
+						}
 					} else {
+						ManyToOne manyToOne = (ManyToOne) field.getDeclaredAnnotation(ManyToOne.class);
+						Object value = field.get(object);
+						Class<?> className = field.getType();
+						DBConnection connection = (DBConnection) className.getAnnotation(DBConnection.class);
 						table.setRelationship(Relationship.ManyToOne);
-						table.setClassName(field.getType().getClass());
+						table.setFetchType(manyToOne.fetch());
+						table.setClassName(className);
+						table.setConnection(connection.connection());
+						if(value != null  && manyToOne.cascade().equals(CascadeType.ALL)) {
+							table.setObject(value);
+						}
 					}
 					joinTables.add(table);
 				}

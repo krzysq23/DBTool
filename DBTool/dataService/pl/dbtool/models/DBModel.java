@@ -3,13 +3,10 @@ package pl.dbtool.models;
 import java.util.List;
 import java.util.Map;
 
-import pl.dbtool.annotations.ColumnId.AutoIncrement;
-
 public class DBModel {
 
 	private String connection;
 	private String table;
-	private AutoIncrement autoIncrement;
 	private String columnIDName;
 	private Object columnIDValue;
 	private Map<String, Object> fields;
@@ -45,15 +42,6 @@ public class DBModel {
 	}
 	public void setFields(Map<String, Object> fields) {
 		this.fields = fields;
-	}
-	public AutoIncrement isAutoIncrement() {
-		return autoIncrement;
-	}
-	public void setAutoIncrement(AutoIncrement autoIncrement) {
-		this.autoIncrement = autoIncrement;
-	}
-	public AutoIncrement getAutoIncrement() {
-		return autoIncrement;
 	}
 	public List<DBJoinTable> getJoinTables() {
 		return joinTables;

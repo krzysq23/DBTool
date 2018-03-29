@@ -4,13 +4,13 @@ import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
 import pl.dbtool.annotations.DBConnection;
 import pl.dbtool.annotations.Table;
-import pl.dbtool.annotations.ColumnId.AutoIncrement;
+import pl.dbtool.annotations.ColumnId.GenerationType;
 
 @DBConnection(connection = "office")
 @Table(name = "TEST_INFO")
 public class TestInfo {
 
-	@ColumnId(seq = AutoIncrement.FALSE, name = "ID")
+	@ColumnId( strategy = GenerationType.OWN , name = "ID")
 	private String Id;
 	
 	@Column(name = "INFO")

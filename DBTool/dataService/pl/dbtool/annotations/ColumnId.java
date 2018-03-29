@@ -10,10 +10,10 @@ import java.lang.annotation.Target;
 @Target(FIELD)
 public @interface ColumnId {
 
-	public enum AutoIncrement {
-	   TRUE, FALSE
+	public enum GenerationType {
+	   AUTO, SEQUENCE, OWN
 	}
 	
-	AutoIncrement seq() default AutoIncrement.TRUE;
+	GenerationType strategy();
 	String name();
 }

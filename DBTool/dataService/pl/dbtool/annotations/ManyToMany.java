@@ -14,6 +14,11 @@ public @interface ManyToMany {
 		LAZY, EAGER
 	}
 	
+	public enum CascadeType {
+		ALL, MERGE, REFRESH, PERSIST, REMOVE, DETACH
+	}
+	
 	FetchType fetch() default FetchType.LAZY;
+	CascadeType cascade() default CascadeType.ALL;
 	
 }

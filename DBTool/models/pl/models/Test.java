@@ -5,19 +5,21 @@ import java.util.Set;
 
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
-import pl.dbtool.annotations.ColumnId.AutoIncrement;
+import pl.dbtool.annotations.ColumnId.GenerationType;
 import pl.dbtool.annotations.ManyToMany.FetchType;
 import pl.dbtool.annotations.DBConnection;
 import pl.dbtool.annotations.JoinTable;
 import pl.dbtool.annotations.ManyToMany;
 import pl.dbtool.annotations.ManyToOne;
+import pl.dbtool.annotations.SequenceGenerator;
 import pl.dbtool.annotations.Table;
 
 @DBConnection(connection = "oracle")
 @Table(name = "TableTest")
 public class Test {
 
-	@ColumnId(seq = AutoIncrement.TRUE, name = "ID")
+	@ColumnId(strategy = GenerationType.SEQUENCE, name = "ID")
+	@SequenceGenerator(sequenceName = "SEQ_TEST_ID")
 	private int Id;
 	
 	@Column(name = "TITLE")

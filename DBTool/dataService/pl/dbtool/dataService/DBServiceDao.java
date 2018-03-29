@@ -19,7 +19,8 @@ import java.util.Set;
 
 import pl.dbtool.annotations.Column;
 import pl.dbtool.annotations.ColumnId;
-import pl.dbtool.annotations.ColumnId.AutoIncrement;
+import pl.dbtool.annotations.SequenceGenerator;
+import pl.dbtool.annotations.ColumnId.GenerationType;
 import pl.dbtool.models.DBJoinTable;
 import pl.dbtool.models.DBJoinTable.Relationship;
 import pl.dbtool.models.DBJoinedColumn;
@@ -39,7 +40,7 @@ public class DBServiceDao<T> {
 
 		Connection connection = getConnection(dbModel.getConnection());
 		boolean isJoined = false;
-		getJoinedObjectList(dbModel, connection);
+		getJoinedObjectList(dbModel);
 		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
 			isJoined = true;
 		}
@@ -75,7 +76,7 @@ public class DBServiceDao<T> {
 
 		Connection connection = getConnection(dbModel.getConnection());
 		boolean isJoined = false;
-		getJoinedObjectList(dbModel, connection);
+		getJoinedObjectList(dbModel);
 		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
 			isJoined = true;
 		}
@@ -111,7 +112,7 @@ public class DBServiceDao<T> {
 
 		Connection connection = getConnection(dbModel.getConnection());
 		boolean isJoined = false;
-		getJoinedObjectList(dbModel, connection);
+		getJoinedObjectList(dbModel);
 		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
 			isJoined = true;
 		}
@@ -148,7 +149,7 @@ public class DBServiceDao<T> {
 
 		Connection connection = getConnection(dbModel.getConnection());
 		boolean isJoined = false;
-		getJoinedObjectList(dbModel, connection);
+		getJoinedObjectList(dbModel);
 		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
 			isJoined = true;
 		}
@@ -192,11 +193,25 @@ public class DBServiceDao<T> {
 	}
 
 	@SuppressWarnings("unused")
-	protected void save(DBModel dbModel) throws SQLException {
+	protected void save(DBModel dbModel) throws SQLException, ClassNotFoundException, IllegalArgumentException, IllegalAccessException {
 
 		Connection connection = getConnection(dbModel.getConnection());
+		boolean isAutoIncrement = false;
+		Object idValue = dbModel.getColumnIDValue();
+		for (Field field : myClass.getDeclaredFields()) {
+			if(field.isAnnotationPresent(ColumnId.class)) {
+				ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
+				if(columnId.strategy().equals(GenerationType.SEQUENCE)) {
+					SequenceGenerator sequenceGenerator = (SequenceGenerator) field.getDeclaredAnnotation(SequenceGenerator.class);
+					idValue = getNextValueFromSequence(sequenceGenerator.sequenceName(), connection);
+					isAutoIncrement = true;
+				} else if (columnId.strategy().equals(GenerationType.OWN)) {
+					isAutoIncrement = true;
+				}
+			}
+		}
 		String query = "INSERT INTO  " + dbModel.getTable() + " ( " ;
-		if(dbModel.getAutoIncrement().equals(AutoIncrement.FALSE)) {
+		if(isAutoIncrement) {
 			query += dbModel.getColumnIDName() + ", ";
 		}
 		int i = 0;
@@ -209,7 +224,7 @@ public class DBServiceDao<T> {
 		}
 		query += " VALUES ( ";
 		
-		if(dbModel.getAutoIncrement().equals(AutoIncrement.FALSE)) {
+		if(isAutoIncrement) {
 			query += "?, ";
 		}
 		i = 0;
@@ -222,8 +237,8 @@ public class DBServiceDao<T> {
 		}
 		PreparedStatement preparedStatement = connection.prepareStatement(query);
 		i = 1;
-		if(dbModel.getAutoIncrement().equals(AutoIncrement.FALSE)) {
-			setPreparedStatement(i, preparedStatement, dbModel.getColumnIDValue());
+		if(isAutoIncrement) {
+			setPreparedStatement(i, preparedStatement, idValue);
 			i++;
 		}
 		for (Map.Entry<String, Object> entry : dbModel.getFields().entrySet()) {
@@ -233,6 +248,18 @@ public class DBServiceDao<T> {
 		preparedStatement.executeQuery();
 		connection.commit();
 		preparedStatement.close();
+		if(dbModel.getJoinTables() != null) {
+			for (DBJoinTable joinTable : dbModel.getJoinTables()) {
+				if(joinTable.getObjectList() != null) {
+					for ( Object element : joinTable.getObjectList()) {
+						saveJoinColumn(joinTable, connection, element, idValue);
+					}
+				}
+				if(joinTable.getObject() != null) {
+					saveJoinColumn(joinTable, connection, joinTable.getObject(), idValue);
+				}
+			}
+		}
 		connection.close();
 	}
 	
@@ -271,12 +298,22 @@ public class DBServiceDao<T> {
 		preparedStatement.executeQuery();
 		connection.commit();
 		preparedStatement.close();
+		if(dbModel.getJoinTables() != null) {
+			for (DBJoinTable joinTable : dbModel.getJoinTables()) {
+				if(joinTable.getObjectList() != null) {
+					removeJoinColumn(joinTable.getTableName(), joinTable.getReferencedColumnName(), dbModel.getColumnIDValue(), connection);
+				}
+				if(joinTable.getObject() != null) {
+					removeJoinColumn(joinTable.getTableName(), joinTable.getReferencedColumnName(), dbModel.getColumnIDValue(), connection);
+				}
+			}
+		}
 		connection.close();
 	}
 	
 	private Connection getConnection(String connection) {
-		Connection myConnection = null;
-	    return myConnection;
+		Connection manager = null ;
+	    return manager;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -373,10 +410,11 @@ public class DBServiceDao<T> {
 	    }
 	}
 	
-	private void getJoinedObjectList(DBModel dbModel, Connection connection) throws SQLException, ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+	private void getJoinedObjectList(DBModel dbModel) throws SQLException, ClassNotFoundException, NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		
 		if(dbModel.getJoinTables() != null && dbModel.getJoinTables().size() > 0) {
 			for (DBJoinTable record : dbModel.getJoinTables()) {
+				Connection connection = getConnection(record.getConnection());
 				if(record.getRelationship().equals(Relationship.ManyToMany))
 				{
 					Map<Object, Set<Object>> listElement = new HashMap<Object, Set<Object>>();
@@ -403,7 +441,7 @@ public class DBServiceDao<T> {
 				{
 					Map<Object, Object> listElement = new HashMap<Object, Object>();
 					Class<?> clazz = record.getClassName();
-					String queryJoin = "SELECT " + record.getTableName() + ".* FROM " + dbModel.getTable() + " JOIN "
+					String queryJoin = "SELECT DISTINCT " + record.getTableName() + ".* FROM " + dbModel.getTable() + " JOIN "
 							+  record.getTableName() + " ON " + record.getTableName() + "." + record.getReferencedColumnName() 
 									+ " = " + dbModel.getTable() + "." + record.getJoinColumnsName();
 					Statement statementJoin = connection.createStatement();
@@ -414,7 +452,105 @@ public class DBServiceDao<T> {
 					}
 					record.setField(listElement);
 				}
+				connection.close();
 			}
 		}
+	}
+	
+	@SuppressWarnings("unused")
+	private void saveJoinColumn(DBJoinTable joinTable, Connection connection, Object element, Object id) throws SQLException, IllegalArgumentException, IllegalAccessException {
+		
+		boolean isAutoIncrement = false;
+		Class<?> obj = element.getClass();
+		Object idValue = null;
+		String idColumnName = "";
+		Map<String, Object> fields = new HashMap<>();
+		for (Field field : obj.getDeclaredFields()) {
+			field.setAccessible(true);
+			Object value = field.get(element);
+			if(field.isAnnotationPresent(ColumnId.class)) {
+				idValue = value;
+				ColumnId columnId = (ColumnId) field.getDeclaredAnnotation(ColumnId.class);
+				idColumnName = columnId.name();
+				if(columnId.strategy().equals(GenerationType.SEQUENCE)) {
+					SequenceGenerator sequenceGenerator = (SequenceGenerator) field.getDeclaredAnnotation(SequenceGenerator.class);
+					idValue = getNextValueFromSequence(sequenceGenerator.sequenceName(), connection);
+					isAutoIncrement = true;
+				} else if (columnId.strategy().equals(GenerationType.OWN)) {
+					isAutoIncrement = true;
+				}
+			}
+			if(field.isAnnotationPresent(Column.class)) {
+				Column column = (Column) field.getDeclaredAnnotation(Column.class);
+				if(column.name().equals(joinTable.getReferencedColumnName())) {
+					fields.put(column.name(), id);
+				} else if(value != null) {
+					fields.put(column.name(), value);
+				}
+			}
+		}
+		String query = "INSERT INTO  " + joinTable.getTableName() + " ( " ;
+		if(isAutoIncrement) {
+			query += idColumnName + ", ";
+		}
+		int i = 0;
+		for (Map.Entry<String, Object> entry : fields.entrySet()) {
+			if(i++ == fields.size() - 1) {
+				query += entry.getKey() + " )";
+			} else {
+				query += entry.getKey() + ", ";
+			}
+		}
+		query += " VALUES ( ";
+		
+		if(isAutoIncrement) {
+			query += "?, ";
+		}
+		i = 0;
+		for (Map.Entry<String, Object> entry : fields.entrySet()) {
+			if(i++ == fields.size() - 1) {
+				query += "? )";
+			} else {
+				query += "?, ";
+			}
+		}
+		PreparedStatement preparedStatement = connection.prepareStatement(query);
+		i = 1;
+		if(isAutoIncrement) {
+			setPreparedStatement(i, preparedStatement, idValue);
+			i++;
+		}
+		for (Map.Entry<String, Object> entry : fields.entrySet()) {
+			setPreparedStatement(i, preparedStatement, entry.getValue());
+			i++;
+		}
+		preparedStatement.executeQuery();
+		connection.commit();
+		preparedStatement.close();
+	}
+	
+	private void removeJoinColumn(String tableName, String columnName, Object value, Connection connection) throws SQLException {
+		
+		String query = "DELETE FROM " + tableName + " WHERE " + columnName + " = ? ";
+		PreparedStatement preparedStatement = connection.prepareStatement(query);
+		setPreparedStatement(1, preparedStatement, value);
+		preparedStatement.executeQuery();
+		connection.commit();
+		preparedStatement.close();
+	}
+	
+	private int getNextValueFromSequence(String sequence, Connection conn) throws SQLException {
+		
+		String query = "SELECT " + sequence + ".nextval FROM dual";
+		int nextValue = 1 ;
+		PreparedStatement pst = conn.prepareStatement(query);
+		synchronized( this ) {
+			ResultSet rs = pst.executeQuery();
+			if(rs.next())
+			{
+				nextValue = rs.getInt(1);
+			}
+		}
+		return nextValue;
 	}
 }
